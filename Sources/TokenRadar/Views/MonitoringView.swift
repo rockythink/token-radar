@@ -549,36 +549,20 @@ struct MonitoringView: View {
                 actionTitle: store.hasClaudeCodeMonitorTarget ? store.t("auth.import_sessions") : store.t("monitoring.source_create_monitor"),
                 isConfigured: store.hasClaudeCodeMonitorTarget
             ),
-            quickProviderSource(.openRouter),
-            quickProviderSource(.siliconFlow),
-            quickProviderSource(.deepSeek),
-            quickProviderSource(.zhipuGLM),
             MonitoringQuickSource(
-                id: "chatgpt-subscription",
-                title: store.t("monitoring.dashboard_chatgpt_subscription"),
-                subtitle: store.t("monitoring.dashboard_manual_membership"),
-                provider: .openAI,
+                id: "local-proxy",
+                title: store.t("monitoring.dashboard_realtime_proxy"),
+                subtitle: store.t("monitoring.dashboard_realtime_proxy_detail"),
+                provider: store.settings.defaultProxyProvider,
                 appIcon: nil,
-                accountKind: .subscriptionUser,
-                symbol: "person.crop.circle.badge.checkmark",
-                tint: .green,
-                badge: store.t("monitoring.account_subscription"),
-                actionTitle: providerHasSubscriptionMonitor(.openAI) ? store.t("monitoring.source_bound") : store.t("monitoring.add"),
-                isConfigured: providerHasSubscriptionMonitor(.openAI)
+                accountKind: .apiUser,
+                symbol: "point.3.connected.trianglepath.dotted",
+                tint: store.isProxyRunning ? .green : .orange,
+                badge: store.t("monitoring.coverage_local_device_only"),
+                actionTitle: store.isProxyRunning ? store.t("menu.pause_proxy") : store.t("menu.start_proxy"),
+                isConfigured: store.isProxyRunning
             ),
-            MonitoringQuickSource(
-                id: "claude-subscription",
-                title: store.t("monitoring.dashboard_claude_subscription"),
-                subtitle: store.t("monitoring.dashboard_manual_membership"),
-                provider: .anthropic,
-                appIcon: nil,
-                accountKind: .subscriptionUser,
-                symbol: "person.crop.circle.badge.checkmark",
-                tint: .orange,
-                badge: store.t("monitoring.account_subscription"),
-                actionTitle: providerHasSubscriptionMonitor(.anthropic) ? store.t("monitoring.source_bound") : store.t("monitoring.add"),
-                isConfigured: providerHasSubscriptionMonitor(.anthropic)
-            )
+            quickProviderSource(.openAI)
         ]
     }
 
@@ -604,15 +588,6 @@ struct MonitoringView: View {
     private func providerHasMonitor(_ provider: ProviderKind) -> Bool {
         store.settings.monitorTargets.contains { target in
             target.provider == provider &&
-                !store.isCodexMonitorTarget(target) &&
-                !store.isClaudeCodeMonitorTarget(target)
-        }
-    }
-
-    private func providerHasSubscriptionMonitor(_ provider: ProviderKind) -> Bool {
-        store.settings.monitorTargets.contains { target in
-            target.provider == provider &&
-                target.accountKind == .subscriptionUser &&
                 !store.isCodexMonitorTarget(target) &&
                 !store.isClaudeCodeMonitorTarget(target)
         }

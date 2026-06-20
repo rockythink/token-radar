@@ -132,7 +132,7 @@
 "proxy.running" = "執行中";
 "proxy.paused" = "已暫停";
 "proxy.supported_paths" = "支援的請求路徑";
-"proxy.streaming_note" = "MVP 暫不支援串流請求，以確保能穩定解析最終 JSON 中的 usage。";
+"proxy.streaming_note" = "支援串流和非串流 OpenAI 相容請求；串流用量會在上游返回最終 usage 事件時記錄。";
 "proxy.tracked_ranking" = "榜單模型";
 "proxy.tracked_ranking_subtitle" = "命中這些別名的呼叫會歸入總覽模型榜。";
 "settings.providers" = "供應商";
@@ -300,12 +300,14 @@
 "monitoring.dashboard_model_usage" = "模型用量";
 "monitoring.dashboard_model_usage_subtitle" = "本月按模型、供應商和來源聚合。";
 "monitoring.dashboard_no_model_usage" = "還沒有模型用量記錄。";
-"monitoring.dashboard_quick_sources" = "常用來源";
-"monitoring.dashboard_quick_sources_subtitle" = "自動來源直接同步，API 和套餐來源按需新增。";
+"monitoring.dashboard_quick_sources" = "先接一個真實來源";
+"monitoring.dashboard_quick_sources_subtitle" = "先選和你今天使用方式一致的一條鏈路，其他供應商可以從「新增資料來源」進入。";
 "monitoring.dashboard_last_seen" = "最近";
 "monitoring.dashboard_manual_or_proxy" = "手動 / 本機代理";
 "monitoring.dashboard_auto_local" = "本機自動來源";
 "monitoring.dashboard_auto" = "自動";
+"monitoring.dashboard_realtime_proxy" = "即時 API 捕獲";
+"monitoring.dashboard_realtime_proxy_detail" = "把相容 OpenAI 的客戶端指到 localhost，捕獲串流和非串流請求。";
 "monitoring.dashboard_chatgpt_subscription" = "ChatGPT 訂閱";
 "monitoring.dashboard_claude_subscription" = "Claude 訂閱";
 "monitoring.dashboard_manual_membership" = "會員等級、月費和額度手動記錄。";

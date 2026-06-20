@@ -435,7 +435,7 @@ private struct MonitoringQuickSourceCard: View {
                         .background(source.tint.opacity(0.12))
                         .clipShape(Capsule())
                     Spacer(minLength: 8)
-                    Label(source.actionTitle, systemImage: source.isConfigured ? "checkmark.circle" : "plus.circle")
+                    Label(source.actionTitle, systemImage: actionSymbol)
                         .font(.caption.weight(.medium))
                         .foregroundStyle(source.isConfigured ? .secondary : source.tint)
                         .lineLimit(1)
@@ -447,5 +447,12 @@ private struct MonitoringQuickSourceCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+    }
+
+    private var actionSymbol: String {
+        if source.id == "local-proxy" {
+            return source.isConfigured ? "pause.circle" : "play.circle"
+        }
+        return source.isConfigured ? "checkmark.circle" : "plus.circle"
     }
 }

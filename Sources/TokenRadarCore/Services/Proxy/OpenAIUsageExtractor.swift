@@ -20,9 +20,10 @@ public enum OpenAIUsageExtractor {
     ) -> ExtractedUsage? {
         let responseObject = (try? JSONSerialization.jsonObject(with: responseData)) as? [String: Any]
         let requestObject = (try? JSONSerialization.jsonObject(with: requestData)) as? [String: Any]
-        let usage = responseObject?["usage"] as? [String: Any]
+        let responsePayload = responseObject?["response"] as? [String: Any]
+        let usage = responseObject?["usage"] as? [String: Any] ?? responsePayload?["usage"] as? [String: Any]
 
-        let responseModel = responseObject?["model"] as? String
+        let responseModel = responseObject?["model"] as? String ?? responsePayload?["model"] as? String
         let requestModel = requestObject?["model"] as? String
         let model = responseModel ?? requestModel ?? fallbackModel
 
@@ -46,5 +47,33 @@ public enum OpenAIUsageExtractor {
 
         return ExtractedUsage(model: model, inputTokens: inputTokens, outputTokens: outputTokens)
     }
-}
 
+    public static func extractEventStream(
+        responseData: Data,
+        requestData: Data,
+        fallbackModel: String = "unknown"
+    ) -> ExtractedUsage? {
+        guard let text = String(data: responseData, encoding: .utf8) else {
+            return nil
+        }
+
+        var latestUsage: ExtractedUsage?
+        for line in text.split(whereSeparator: \.isNewline) {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.hasPrefix("data:") else { continue }
+
+            let payload = trimmed
+                .dropFirst("data:".count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard payload != "[DONE]", let data = payload.data(using: .utf8) else {
+                continue
+            }
+
+            if let extracted = extract(responseData: data, requestData: requestData, fallbackModel: fallbackModel) {
+                latestUsage = extracted
+            }
+        }
+
+        return latestUsage
+    }
+}

@@ -1,4 +1,6 @@
 import Foundation
+import Darwin
+import Network
 import TokenRadarCore
 
 try checkOpenAIParser()
@@ -15,10 +17,18 @@ try checkSubscriptionCalculator()
 try checkSubscriptionDecodingDefaults()
 try checkAppSettingsDecodingDefaults()
 try checkProxyCore()
+try checkStreamingProxyForwarding()
 try checkClaudeCodeSessionImporter()
 try checkCodexSessionImporter()
 try checkSQLiteRoundTrip()
 print("TokenRadarCoreChecks passed")
+
+private enum CoreCheckError: Error {
+    case portUnavailable
+    case listenerNotReady
+    case clientRequestFailed
+    case clientResponseMissing
+}
 
 private func checkOpenAIParser() throws {
         let snapshot = try ProviderParsers.parseOpenAICosts(fixture("openai-costs"))
@@ -254,6 +264,142 @@ private func checkProxyCore() throws {
         expect(extracted?.outputTokens == 250, "Usage output mismatch")
         expect(ModelCatalog.trackedModel(for: "grok-4.3")?.displayName == "Gork", "Grok/Gork alias mismatch")
         expect(ModelCatalog.imageRanking.count == 13, "Tracked model count mismatch")
+
+        let chatStream = Data("""
+        data: {"id":"chatcmpl_demo","model":"gpt-4o-mini","choices":[{"delta":{"content":"hi"}}],"usage":null}
+
+        data: {"id":"chatcmpl_demo","model":"gpt-4o-mini","choices":[],"usage":{"prompt_tokens":42,"completion_tokens":8}}
+
+        data: [DONE]
+
+        """.utf8)
+        let chatStreamExtracted = OpenAIUsageExtractor.extractEventStream(
+            responseData: chatStream,
+            requestData: Data(#"{"model":"gpt-4o-mini","stream":true}"#.utf8)
+        )
+        expect(chatStreamExtracted?.model == "gpt-4o-mini", "Chat stream usage model mismatch")
+        expect(chatStreamExtracted?.inputTokens == 42, "Chat stream usage input mismatch")
+        expect(chatStreamExtracted?.outputTokens == 8, "Chat stream usage output mismatch")
+
+        let responsesStream = Data("""
+        event: response.output_text.delta
+        data: {"type":"response.output_text.delta","delta":"hi"}
+
+        event: response.completed
+        data: {"type":"response.completed","response":{"id":"resp_demo","model":"gpt-4.1","usage":{"input_tokens":77,"output_tokens":12}}}
+
+        """.utf8)
+        let responsesStreamExtracted = OpenAIUsageExtractor.extractEventStream(
+            responseData: responsesStream,
+            requestData: Data(#"{"model":"gpt-4.1","stream":true}"#.utf8)
+        )
+        expect(responsesStreamExtracted?.model == "gpt-4.1", "Responses stream usage model mismatch")
+        expect(responsesStreamExtracted?.inputTokens == 77, "Responses stream usage input mismatch")
+        expect(responsesStreamExtracted?.outputTokens == 12, "Responses stream usage output mismatch")
+    }
+
+private func checkStreamingProxyForwarding() throws {
+        let upstreamPort = try reservePort()
+        let proxyPort = try reservePort()
+        let queue = DispatchQueue(label: "token-radar.streaming-proxy-check")
+        let upstreamReady = DispatchSemaphore(value: 0)
+        let upstreamListener = try NWListener(using: .tcp, on: NWEndpoint.Port(rawValue: UInt16(upstreamPort))!)
+        upstreamListener.stateUpdateHandler = { state in
+            if case .ready = state {
+                upstreamReady.signal()
+            }
+        }
+        upstreamListener.newConnectionHandler = { connection in
+            connection.start(queue: queue)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) { _, _, _, _ in
+                let response = """
+                HTTP/1.1 200 OK\r
+                Content-Type: text/event-stream\r
+                Connection: close\r
+                \r
+                data: {"id":"chatcmpl_proxy","model":"gpt-4o-mini","choices":[{"delta":{"content":"hi"}}],"usage":null}
+
+                data: {"id":"chatcmpl_proxy","model":"gpt-4o-mini","choices":[],"usage":{"prompt_tokens":9,"completion_tokens":4}}
+
+                data: [DONE]
+
+                """
+                connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
+        }
+        upstreamListener.start(queue: queue)
+        guard upstreamReady.wait(timeout: .now() + 3) == .success else {
+            upstreamListener.cancel()
+            throw CoreCheckError.listenerNotReady
+        }
+
+        var capturedRecords: [UsageRecord] = []
+        let recordLock = NSLock()
+        let recordReady = DispatchSemaphore(value: 0)
+        let proxy = LocalProxyServer()
+        try proxy.start(
+            configuration: LocalProxyServer.Configuration(
+                port: proxyPort,
+                upstreamBaseURL: URL(string: "http://127.0.0.1:\(upstreamPort)")!,
+                upstreamAPIKey: "test-key",
+                provider: .openAI
+            ),
+            shouldBlockRequest: { false },
+            onRecord: { record in
+                recordLock.lock()
+                capturedRecords.append(record)
+                recordLock.unlock()
+                recordReady.signal()
+            },
+            onError: { error in
+                fatalError("Streaming proxy forwarding error: \(error)")
+            }
+        )
+        defer {
+            proxy.stop()
+            upstreamListener.cancel()
+        }
+
+        Thread.sleep(forTimeInterval: 0.15)
+
+        var clientRequest = URLRequest(url: URL(string: "http://127.0.0.1:\(proxyPort)/v1/chat/completions")!)
+        clientRequest.httpMethod = "POST"
+        clientRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        clientRequest.httpBody = Data(#"{"model":"gpt-4o-mini","stream":true,"messages":[]}"#.utf8)
+
+        let clientReady = DispatchSemaphore(value: 0)
+        var clientData: Data?
+        var clientError: Error?
+        let task = URLSession.shared.dataTask(with: clientRequest) { data, _, error in
+            clientData = data
+            clientError = error
+            clientReady.signal()
+        }
+        task.resume()
+
+        guard clientReady.wait(timeout: .now() + 5) == .success else {
+            throw CoreCheckError.clientRequestFailed
+        }
+        if let clientError {
+            throw clientError
+        }
+        guard let clientData, let body = String(data: clientData, encoding: .utf8) else {
+            throw CoreCheckError.clientResponseMissing
+        }
+        expect(body.contains("chatcmpl_proxy"), "Streaming proxy should forward SSE body")
+        guard recordReady.wait(timeout: .now() + 2) == .success else {
+            throw CoreCheckError.clientResponseMissing
+        }
+
+        recordLock.lock()
+        let record = capturedRecords.first
+        recordLock.unlock()
+        expect(record?.source == .localProxy, "Streaming proxy record source mismatch")
+        expect(record?.model == "gpt-4o-mini", "Streaming proxy record model mismatch")
+        expect(record?.inputTokens == 9, "Streaming proxy input token mismatch")
+        expect(record?.outputTokens == 4, "Streaming proxy output token mismatch")
     }
 
 private func checkClaudeCodeSessionImporter() throws {
@@ -352,6 +498,44 @@ private func checkSQLiteRoundTrip() throws {
 private func fixture(_ name: String) throws -> Data {
         let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures")!
         return try Data(contentsOf: url)
+    }
+
+private func reservePort() throws -> Int {
+        let descriptor = socket(AF_INET, SOCK_STREAM, 0)
+        guard descriptor >= 0 else {
+            throw CoreCheckError.portUnavailable
+        }
+        defer {
+            close(descriptor)
+        }
+
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = 0
+        address.sin_addr = in_addr(s_addr: in_addr_t(INADDR_LOOPBACK).bigEndian)
+
+        let bindResult = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+                bind(descriptor, sockaddrPointer, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard bindResult == 0 else {
+            throw CoreCheckError.portUnavailable
+        }
+
+        var assignedAddress = sockaddr_in()
+        var assignedLength = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let nameResult = withUnsafeMutablePointer(to: &assignedAddress) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+                getsockname(descriptor, sockaddrPointer, &assignedLength)
+            }
+        }
+        guard nameResult == 0 else {
+            throw CoreCheckError.portUnavailable
+        }
+
+        return Int(UInt16(bigEndian: assignedAddress.sin_port))
     }
 
 private func expect(_ condition: @autoclosure () -> Bool, _ message: String) {

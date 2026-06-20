@@ -22,7 +22,7 @@ Token Radar uses a mixed refresh model:
 
 | Source | Refresh behavior |
 | --- | --- |
-| Local proxy | Request-driven. A matching non-streaming request is recorded as soon as the upstream response includes `usage`. |
+| Local proxy | Request-driven. Matching streaming and non-streaming requests are recorded as soon as the upstream response includes `usage` or emits a final usage event. |
 | Codex and Claude Code local logs | Near real-time. The app watches `~/.codex/sessions` and `~/.claude/projects` for directory and `.jsonl` file changes, debounces events, then imports new local records and quota snapshots. |
 | Official provider usage/billing APIs | Optional polling. Users can enable automatic provider refresh and choose a 15 minute to 6 hour interval in Settings. Provider-side reporting can still lag behind real traffic. |
 | Manual subscription plans | User-maintained. They update when the user edits the plan or when matched local records change the computed usage. |
@@ -64,7 +64,7 @@ Units can be messages, tokens, requests, or USD. Consumer subscriptions remain b
 | Cloudflare AI Gateway | Logs API, parsed by model/provider/tokens/cost/status. | Cloudflare API token plus `account_id/gateway_id`. | Request-level logs are official gateway data. |
 | Cloudflare Workers AI | Delayed cloud billing / dashboard Neuron usage. | Cloudflare account access; future billing export integration. | Workers AI bills in Neurons, not direct token dollars. |
 | Gemini API | Cloud Billing / AI Studio usage; proxy token metadata estimate. | Google project billing setup for official cost view. | Billing data can appear with delay. |
-| Local OpenAI-compatible proxy | `/v1/chat/completions` and `/v1/responses` capture on this Mac. | Provider API key stored in Keychain. | Only sees requests routed through Token Radar on the current device. |
+| Local OpenAI-compatible proxy | `/v1/chat/completions` and `/v1/responses` capture on this Mac, including streaming responses when the upstream emits usage. | Provider API key stored in Keychain. | Only sees requests routed through Token Radar on the current device. |
 | Network egress proxy | macOS system proxy, direct, HTTP/HTTPS, or SOCKS. | Optional host/port for manual modes. | Lets Token Radar coexist with Surge/Clash instead of replacing them. |
 | Claude Code local logs | Reads `~/.claude/projects/**/*.jsonl`. | Local filesystem access. | Mirrors the local-log approach used by ccusage-style tools; other coding CLIs need source-specific adapters. |
 | Codex subscription quota + activity | Auto-detects Codex CLI/auth/session state and reads `~/.codex/sessions/**/*.jsonl` `payload.rate_limits` plus `payload.info.last_token_usage`. | Local filesystem access after Codex has run on this Mac. | Automatically creates an `OpenAI Codex` monitor item, syncs general/model-specific 5-hour and weekly remaining quota, and imports local historical token activity at zero variable API cost. |
@@ -73,6 +73,7 @@ Units can be messages, tokens, requests, or USD. Consumer subscriptions remain b
 ## References Checked
 
 - OpenAI Usage and Costs API: https://platform.openai.com/docs/api-reference/usage/cost
+- OpenAI streaming responses: https://developers.openai.com/api/docs/guides/streaming-responses
 - OpenAI API rate limits: https://platform.openai.com/docs/guides/rate-limits
 - OpenAI Codex issue requesting non-interactive `/status`: https://github.com/openai/codex/issues/10233
 - codex-cli-usage reference implementation: https://github.com/wakamex/codex-cli-usage

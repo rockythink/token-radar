@@ -132,7 +132,7 @@
 "proxy.running" = "Running";
 "proxy.paused" = "Paused";
 "proxy.supported_paths" = "Supported incoming paths";
-"proxy.streaming_note" = "Streaming requests are rejected in the MVP so Token Radar can reliably parse usage from the final JSON response.";
+"proxy.streaming_note" = "Streaming and non-streaming OpenAI-compatible requests are supported. Streaming usage is recorded when the upstream sends a final usage event.";
 "proxy.tracked_ranking" = "Tracked Ranking Models";
 "proxy.tracked_ranking_subtitle" = "Calls matching these aliases are grouped into the dashboard list.";
 "settings.providers" = "Providers";
@@ -300,12 +300,14 @@
 "monitoring.dashboard_model_usage" = "Model Usage";
 "monitoring.dashboard_model_usage_subtitle" = "Grouped by model, provider, and source for this month.";
 "monitoring.dashboard_no_model_usage" = "No model usage records yet.";
-"monitoring.dashboard_quick_sources" = "Common Sources";
-"monitoring.dashboard_quick_sources_subtitle" = "Auto sources sync directly; API and package sources can be added when needed.";
+"monitoring.dashboard_quick_sources" = "Start With One Source";
+"monitoring.dashboard_quick_sources_subtitle" = "Choose the path that matches how you use AI today; other providers stay available through Add Data Source.";
 "monitoring.dashboard_last_seen" = "Last";
 "monitoring.dashboard_manual_or_proxy" = "Manual / local proxy";
 "monitoring.dashboard_auto_local" = "Local auto source";
 "monitoring.dashboard_auto" = "Auto";
+"monitoring.dashboard_realtime_proxy" = "Realtime API capture";
+"monitoring.dashboard_realtime_proxy_detail" = "Route OpenAI-compatible clients through localhost to capture streamed and non-streamed requests.";
 "monitoring.dashboard_chatgpt_subscription" = "ChatGPT subscription";
 "monitoring.dashboard_claude_subscription" = "Claude subscription";
 "monitoring.dashboard_manual_membership" = "Membership tier, monthly fee, and quota are recorded manually.";
