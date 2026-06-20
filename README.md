@@ -2,137 +2,124 @@
 
 ![Token Radar logo](Assets/Brand/TokenRadar/png/token-radar-logo-128.png)
 
-Token Radar is a local-first macOS menu bar app for independent developers who
-want a clearer view of AI model spend, token usage, remaining quota, and budget
-risk across API providers, gateways, coding CLIs, and subscription-style plans.
+Token Radar 是一个本地优先的 macOS 菜单栏应用，用来统一查看 AI 模型花费、Token 用量、订阅月费、剩余额度和预算风险。它面向经常同时使用 API、网关、Coding CLI、本地代理和订阅套餐的独立开发者。
 
-The app is built with SwiftUI and Swift Package Manager. It stores credentials
-in macOS Keychain, usage records in local SQLite storage, and settings on the
-current Mac.
+> 当前状态：早期预览版。核心监控链路已经可用，但不同供应商的官方接口、消费端订阅额度和浏览器授权支持仍在演进。
 
-> Status: early preview. Core monitoring flows are usable, but provider coverage
-> and subscription quota support are still evolving.
+## 软件截图
 
-## Why
+![Token Radar dashboard](Assets/Screenshots/token-radar-dashboard.png)
 
-AI usage is now split across API keys, gateways, coding assistants, CLI tools,
-and subscriptions. Provider dashboards are useful, but they are fragmented,
-delayed, and usually do not answer simple local questions:
+截图中的数字是 README 演示数据，不代表真实账户账单或本机用量。
 
-- How much did this Mac spend today?
-- Which model burned the most tokens?
-- How much quota is left before the next reset?
-- Which traffic is official provider data, local capture, or only an estimate?
+## 为什么做
 
-Token Radar makes those sources visible in one local app.
+现在的 AI 使用成本分散在很多地方：OpenAI/Anthropic API、OpenRouter、Vercel AI Gateway、Cloudflare AI Gateway、本机代理、Codex、Claude Code、ChatGPT/Claude 订阅套餐。供应商控制台有用，但它们通常是碎片化、延迟的，也很难回答几个本地问题：
 
-## Current Capabilities
+- 这台 Mac 今天通过哪些入口消耗了 Token？
+- 哪个模型烧掉最多输入、输出或缓存 Token？
+- API 预算还剩多少，是否可能月底超支？
+- 订阅套餐的固定月费和变量 API 花费到底要不要分开算？
+- 当前数据是官方账单、本地捕获，还是只能算估算？
 
-- Native macOS menu bar app with SwiftUI dashboard, monitoring, proxy, provider,
-  and settings views.
-- Budget ring, spend and token trends, provider distribution, model ranking,
-  quota runway, and source coverage summaries.
-- Local SQLite usage storage and Keychain-backed provider credentials.
-- UI language support for English, Simplified Chinese, and Traditional Chinese.
-- Read-only provider connectors and parsers for OpenAI, Anthropic, OpenRouter,
-  Vercel AI Gateway, Cloudflare AI Gateway logs, DeepSeek, and estimate modes
-  for Gemini, Cloudflare Workers AI, and OpenAI-compatible providers.
-- Local OpenAI-compatible capture proxy for `/v1/chat/completions` and
-  `/v1/responses`.
-- Network egress proxy compatibility for macOS system proxy, direct connection,
-  HTTP/HTTPS proxy, and SOCKS proxy.
-- Local Claude Code JSONL import from `~/.claude/projects`.
-- Local Codex JSONL import from `~/.codex/sessions`, including quota snapshots
-  when the official client writes rate limit metadata.
-- Subscription plan calculation for monthly fees, included quota, reset windows,
-  amortized cost, projected overage, and stacked quota windows.
+Token Radar 把这些来源放到一个本地应用里，并尽量标明每条数据的可信度和边界。
 
-See [Docs/monitoring-source-matrix.md](Docs/monitoring-source-matrix.md) for
-the coverage matrix, refresh behavior, auth requirements, and source
-limitations.
+## 当前能力
 
-## Privacy Model
+- 原生 SwiftUI macOS 菜单栏应用，包含总览、监控项、代理、供应商和设置视图。
+- 展示预算、变量花费、固定订阅月费、Token 趋势、模型排行、额度 runway 和数据源覆盖范围。
+- 本地 SQLite 存储用量记录，macOS Keychain 保存供应商凭据。
+- 支持英文、简体中文、繁体中文界面。
+- 支持 OpenAI、Anthropic、OpenRouter、Vercel AI Gateway、Cloudflare AI Gateway、DeepSeek 等用量或余额解析。
+- 提供 OpenAI 兼容本地代理，支持 `/v1/chat/completions` 和 `/v1/responses`，包括流式与非流式请求。
+- 支持 macOS 系统代理、直连、HTTP/HTTPS 代理和 SOCKS 作为上游网络出口。
+- 可导入 Claude Code 的本地 JSONL 日志：`~/.claude/projects`。
+- 可导入 Codex 的本地 JSONL 会话：`~/.codex/sessions`，包括官方客户端写入的 rate limit 快照。
+- 订阅套餐按固定月费、额度窗口、重置日、预测超额和多层 quota window 计算。
 
-Token Radar does not require a hosted backend.
+更多覆盖范围、刷新行为、授权要求和边界说明见 [Docs/monitoring-source-matrix.md](Docs/monitoring-source-matrix.md)。
 
-- API credentials are stored in macOS Keychain.
-- Usage records are stored locally.
-- Local session imports read files on this Mac only.
-- The local proxy only sees clients explicitly routed through Token Radar.
-- Official provider refreshes call the provider APIs you configure.
+## 金额口径
 
-Read [PRIVACY.md](PRIVACY.md) before routing real traffic or connecting provider
-credentials.
+Token Radar 不把所有金额都混成一个数字，而是区分四类：
 
-## Requirements
+- 官方花费：供应商或网关 API 返回的成本、余额、credit，用于账单对账。
+- 本地估算：Token 数乘以本地模型价格表，用于本地代理和 CLI 日志。
+- 月预算：用户设置的 API 预算或告警线，用于预算环、剩余预算和硬限额。
+- 固定月费：ChatGPT Plus/Pro、Claude Pro/Max、Codex、Claude Code 等订阅费用，不参与变量用量预算。
 
-- macOS 14 or newer
-- Xcode command line tools
-- Swift 5.10 or newer
+## 隐私模型
 
-## Build and Run
+Token Radar 不需要托管后端。
 
-Run the core checks:
+- API 凭据保存在 macOS Keychain。
+- 用量记录保存在本机 SQLite。
+- 本地会话导入只读取当前 Mac 上的文件。
+- 本地代理只捕获你明确路由到 Token Radar 的客户端请求。
+- 官方刷新只调用你配置过的供应商 API。
+
+在接入真实流量或保存供应商凭据前，请先阅读 [PRIVACY.md](PRIVACY.md)。
+
+## 系统要求
+
+- macOS 14 或更新版本
+- Xcode Command Line Tools
+- Swift 5.10 或更新版本
+
+## 构建和运行
+
+运行核心检查：
 
 ```bash
 ./script/test.sh
 ```
 
-Build the package:
+构建 Swift Package：
 
 ```bash
 swift build
 ```
 
-Build and launch the local app bundle:
+构建并启动本地 app bundle：
 
 ```bash
 ./script/build_and_run.sh
 ```
 
-Launch and verify the app process started:
+构建、启动并确认进程已运行：
 
 ```bash
 ./script/build_and_run.sh --verify
 ```
 
-## Development
+## 开发结构
 
-The package has three targets:
+当前 Swift Package 有三个 target：
 
-- `TokenRadar`: SwiftUI macOS app.
-- `TokenRadarCore`: shared models, provider parsers, storage, proxy core,
-  calculators, and local session importers.
-- `TokenRadarCoreChecks`: executable checks for core behavior.
+- `TokenRadar`：SwiftUI macOS 应用。
+- `TokenRadarCore`：共享模型、供应商解析、存储、代理核心、计算器和本地会话导入。
+- `TokenRadarCoreChecks`：核心行为检查程序。
 
-Read [Docs/architecture.md](Docs/architecture.md) for the module map and data
-flow.
+模块结构和数据流见 [Docs/architecture.md](Docs/architecture.md)。
 
-## Contributing
+## 贡献
 
-Issues and pull requests are welcome. Please read
-[CONTRIBUTING.md](CONTRIBUTING.md) first.
+欢迎提交 issue 和 pull request。请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-Important contribution rules:
+重要规则：
 
-- Do not include real API keys, account tokens, private session logs, provider
-  secrets, or personal billing data.
-- Keep provider integrations read-only unless the change is explicitly about
-  local capture or local settings.
-- Update the monitoring source matrix when provider coverage changes.
+- 不要提交真实 API Key、账户 token、私有会话日志、供应商密钥或个人账单数据。
+- 供应商集成默认保持只读，除非变更明确是本地捕获或本地设置。
+- 如果新增或改变供应商覆盖范围，请同步更新监控来源矩阵。
 
-## Security
+## 安全
 
-Please report suspected vulnerabilities privately. See
-[SECURITY.md](SECURITY.md).
+如果你发现安全问题，请按 [SECURITY.md](SECURITY.md) 私下报告。
 
-## Trademark Notice
+## 商标说明
 
-Token Radar is independent and is not affiliated with, endorsed by, or sponsored
-by any provider shown in the app. Provider names, logos, product names, and
-trademarks belong to their respective owners. See [NOTICE](NOTICE) and
-[TRADEMARKS.md](TRADEMARKS.md).
+Token Radar 是独立项目，不隶属于、不代表、也未获得应用中出现的任何供应商赞助或背书。供应商名称、Logo、产品名和商标归各自权利人所有。详见 [NOTICE](NOTICE) 和 [TRADEMARKS.md](TRADEMARKS.md)。
 
-## License
+## 许可证
 
-Token Radar is released under the [MIT License](LICENSE).
+Token Radar 使用 [MIT License](LICENSE) 开源。
