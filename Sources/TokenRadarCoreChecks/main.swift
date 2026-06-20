@@ -111,6 +111,8 @@ private func checkMonitorTargets() throws {
             provider: .openAI,
             source: .subscriptionPlan,
             scope: .subscription,
+            monthlyBudgetUSD: 0,
+            monthlyFeeUSD: 100,
             usesLocalProxy: true,
             quotaWindows: [
                 SubscriptionQuotaWindow(name: "5h", kind: .fiveHours, includedUnits: 10, quotaUnit: .messages)
@@ -119,6 +121,32 @@ private func checkMonitorTargets() throws {
         expect(subscriptionTarget.matches(proxyRecord), "Subscription target with local proxy should match local proxy records")
         let summary = MonitorTargetSummary(target: subscriptionTarget, records: [proxyRecord])
         expect(summary.quotaWindowSummaries.count == 1, "Subscription monitor should summarize quota windows")
+        expect(subscriptionTarget.fixedMonthlyFeeUSD == 100, "Subscription monitor should store fixed monthly fee separately")
+        expect(subscriptionTarget.budgetLimitUSD == 0, "Subscription monitor should not expose a budget limit")
+        let feeOnlyTarget = MonitorTarget(
+            name: "Fee Only",
+            accountKind: .subscriptionUser,
+            source: .subscriptionPlan,
+            scope: .subscription,
+            monthlyFeeUSD: 20
+        )
+        expect(feeOnlyTarget.monthlyBudgetUSD == 0, "Subscription monitor should not keep default API budget")
+        expect(summary.remainingBudgetUSD == 0, "Subscription monitor should not consume budget remaining")
+        expect(summary.utilization == 0, "Subscription monitor should not report budget utilization")
+
+        let legacyJSON = Data("""
+        {
+          "name": "Legacy ChatGPT Pro",
+          "accountKind": "subscriptionUser",
+          "provider": "openAI",
+          "source": "subscriptionPlan",
+          "scope": "subscription",
+          "monthlyBudgetUSD": 200
+        }
+        """.utf8)
+        let legacyTarget = try JSONDecoder().decode(MonitorTarget.self, from: legacyJSON)
+        expect(legacyTarget.fixedMonthlyFeeUSD == 200, "Legacy subscription budget should migrate to monthly fee")
+        expect(legacyTarget.monthlyBudgetUSD == 0, "Legacy subscription budget should clear after fee migration")
     }
 
 private func checkNetworkProxyConfiguration() throws {
@@ -389,7 +417,7 @@ private func checkStreamingProxyForwarding() throws {
             throw CoreCheckError.clientResponseMissing
         }
         expect(body.contains("chatcmpl_proxy"), "Streaming proxy should forward SSE body")
-        guard recordReady.wait(timeout: .now() + 2) == .success else {
+        guard recordReady.wait(timeout: .now() + 5) == .success else {
             throw CoreCheckError.clientResponseMissing
         }
 

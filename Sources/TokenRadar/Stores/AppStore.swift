@@ -195,7 +195,7 @@ final class AppStore: ObservableObject {
     }
 
     var monthlySubscriptionFeesUSD: Decimal {
-        let monitorFees = enabledSubscriptionMonitorTargets.reduce(Decimal(0)) { $0 + $1.monthlyBudgetUSD }
+        let monitorFees = enabledSubscriptionMonitorTargets.reduce(Decimal(0)) { $0 + $1.fixedMonthlyFeeUSD }
         let planFees = enabledSubscriptions.reduce(Decimal(0)) { $0 + $1.monthlyFeeUSD }
         return monitorFees + planFees
     }
@@ -1084,7 +1084,8 @@ final class AppStore: ObservableObject {
             scope: .device,
             resourceLabel: Self.claudeCodeResourceLabel,
             deviceLabel: Host.current().localizedName ?? "This Mac",
-            monthlyBudgetUSD: 20,
+            monthlyBudgetUSD: 0,
+            monthlyFeeUSD: 20,
             usesLocalProxy: false,
             quotaWindows: [],
             note: t("monitoring.claude_code_detected_note")
@@ -1110,7 +1111,8 @@ final class AppStore: ObservableObject {
             resourceLabel: Self.codexResourceLabel,
             modelPattern: "codex",
             deviceLabel: Host.current().localizedName ?? "This Mac",
-            monthlyBudgetUSD: defaultCodexMonthlyFee(snapshots: snapshots),
+            monthlyBudgetUSD: 0,
+            monthlyFeeUSD: defaultCodexMonthlyFee(snapshots: snapshots),
             usesLocalProxy: false,
             quotaWindows: quotaWindows,
             note: quotaWindows.isEmpty
@@ -1368,7 +1370,7 @@ final class AppStore: ObservableObject {
     func createSubscriptionMonitorTarget(
         provider: ProviderKind,
         name: String,
-        monthlyBudgetUSD: Decimal,
+        monthlyFeeUSD: Decimal,
         modelPattern: String,
         usesLocalProxy: Bool,
         quotaWindows: [SubscriptionQuotaWindow] = [],
@@ -1383,7 +1385,8 @@ final class AppStore: ObservableObject {
             scope: .subscription,
             modelPattern: modelPattern.trimmingCharacters(in: .whitespacesAndNewlines),
             deviceLabel: Host.current().localizedName ?? "This Mac",
-            monthlyBudgetUSD: monthlyBudgetUSD,
+            monthlyBudgetUSD: 0,
+            monthlyFeeUSD: monthlyFeeUSD,
             usesLocalProxy: usesLocalProxy,
             quotaWindows: quotaWindows,
             note: usesLocalProxy ? t("monitoring.subscription_with_proxy_note") : t("monitoring.subscription_browser_note")

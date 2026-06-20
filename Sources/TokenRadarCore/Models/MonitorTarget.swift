@@ -51,6 +51,7 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
     public var modelPattern: String
     public var deviceLabel: String
     public var monthlyBudgetUSD: Decimal
+    public var monthlyFeeUSD: Decimal?
     public var usesLocalProxy: Bool
     public var quotaWindows: [SubscriptionQuotaWindow]
     public var isDemo: Bool
@@ -68,6 +69,7 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
         modelPattern: String = "",
         deviceLabel: String = "",
         monthlyBudgetUSD: Decimal = 25,
+        monthlyFeeUSD: Decimal? = nil,
         usesLocalProxy: Bool = false,
         quotaWindows: [SubscriptionQuotaWindow] = [],
         isDemo: Bool = false,
@@ -83,7 +85,8 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
         self.resourceLabel = resourceLabel
         self.modelPattern = modelPattern
         self.deviceLabel = deviceLabel
-        self.monthlyBudgetUSD = monthlyBudgetUSD
+        self.monthlyBudgetUSD = accountKind == .subscriptionUser ? 0 : monthlyBudgetUSD
+        self.monthlyFeeUSD = monthlyFeeUSD ?? (accountKind == .subscriptionUser ? monthlyBudgetUSD : nil)
         self.usesLocalProxy = usesLocalProxy
         self.quotaWindows = quotaWindows
         self.isDemo = isDemo
@@ -154,7 +157,8 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
             scope: .device,
             resourceLabel: "~/.claude/projects",
             deviceLabel: Host.current().localizedName ?? "This Mac",
-            monthlyBudgetUSD: 20,
+            monthlyBudgetUSD: 0,
+            monthlyFeeUSD: 20,
             note: "Reads local Claude Code JSONL logs on this Mac."
         ),
         MonitorTarget(
@@ -163,7 +167,8 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
             accountKind: .subscriptionUser,
             source: .subscriptionPlan,
             scope: .subscription,
-            monthlyBudgetUSD: 20,
+            monthlyBudgetUSD: 0,
+            monthlyFeeUSD: 20,
             note: "Consumer subscriptions need OAuth/browser auth or manual quota entry."
         )
     ]
@@ -180,6 +185,7 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
         case modelPattern
         case deviceLabel
         case monthlyBudgetUSD
+        case monthlyFeeUSD
         case usesLocalProxy
         case quotaWindows
         case isDemo
@@ -198,11 +204,27 @@ public struct MonitorTarget: Identifiable, Codable, Equatable {
         self.resourceLabel = try container.decodeIfPresent(String.self, forKey: .resourceLabel) ?? ""
         self.modelPattern = try container.decodeIfPresent(String.self, forKey: .modelPattern) ?? ""
         self.deviceLabel = try container.decodeIfPresent(String.self, forKey: .deviceLabel) ?? ""
-        self.monthlyBudgetUSD = try container.decodeIfPresent(Decimal.self, forKey: .monthlyBudgetUSD) ?? 25
+        let decodedBudget = try container.decodeIfPresent(Decimal.self, forKey: .monthlyBudgetUSD)
+        let decodedFee = try container.decodeIfPresent(Decimal.self, forKey: .monthlyFeeUSD)
+        if accountKind == .subscriptionUser {
+            self.monthlyFeeUSD = decodedFee ?? decodedBudget ?? 20
+            self.monthlyBudgetUSD = 0
+        } else {
+            self.monthlyBudgetUSD = decodedBudget ?? 25
+            self.monthlyFeeUSD = decodedFee
+        }
         self.usesLocalProxy = try container.decodeIfPresent(Bool.self, forKey: .usesLocalProxy) ?? false
         self.quotaWindows = try container.decodeIfPresent([SubscriptionQuotaWindow].self, forKey: .quotaWindows) ?? []
         self.isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
         self.note = try container.decodeIfPresent(String.self, forKey: .note) ?? ""
+    }
+
+    public var fixedMonthlyFeeUSD: Decimal {
+        accountKind == .subscriptionUser ? (monthlyFeeUSD ?? monthlyBudgetUSD) : 0
+    }
+
+    public var budgetLimitUSD: Decimal {
+        accountKind == .apiUser ? monthlyBudgetUSD : 0
     }
 
     public var isLegacyStarterTarget: Bool {
@@ -269,8 +291,9 @@ public struct MonitorTargetSummary: Identifiable, Equatable {
         self.spendUSD = monthMatched.reduce(Decimal(0)) { $0 + $1.costUSD }
         self.tokenCount = monthMatched.reduce(0) { $0 + $1.totalTokens }
         self.requestCount = monthMatched.count
-        self.remainingBudgetUSD = max(0, target.monthlyBudgetUSD - spendUSD)
-        self.utilization = target.monthlyBudgetUSD > 0 ? min(1, spendUSD / target.monthlyBudgetUSD) : 0
+        let budgetLimit = target.budgetLimitUSD
+        self.remainingBudgetUSD = max(0, budgetLimit - spendUSD)
+        self.utilization = budgetLimit > 0 ? min(1, spendUSD / budgetLimit) : 0
         self.quotaWindowSummaries = QuotaWindowCalculator.summarizeAll(
             windows: target.quotaWindows,
             records: matched,

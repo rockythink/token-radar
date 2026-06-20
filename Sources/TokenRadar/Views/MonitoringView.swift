@@ -1253,7 +1253,7 @@ private struct MonitorSummaryCard: View {
             if target.accountKind == .apiUser {
                 SpendProgressBar(
                     value: summary.spendUSD,
-                    maxValue: target.monthlyBudgetUSD,
+                    maxValue: target.budgetLimitUSD,
                     tint: summary.utilization >= Decimal(string: "0.9")! ? .orange : .cyan
                 )
             } else {
@@ -1389,9 +1389,9 @@ private struct MonitorSummaryCard: View {
     private var costLine: String {
         switch target.accountKind {
         case .apiUser:
-            "\(MoneyFormatter.usd(summary.spendUSD)) / \(MoneyFormatter.usd(target.monthlyBudgetUSD))"
+            "\(MoneyFormatter.usd(summary.spendUSD)) / \(MoneyFormatter.usd(target.budgetLimitUSD))"
         case .subscriptionUser:
-            "\(MoneyFormatter.usd(target.monthlyBudgetUSD)) / \(store.t("monitoring.per_month"))"
+            "\(MoneyFormatter.usd(target.fixedMonthlyFeeUSD)) / \(store.t("monitoring.per_month"))"
         }
     }
 
@@ -1952,7 +1952,7 @@ private struct AddMonitorWizard: View {
             store.createSubscriptionMonitorTarget(
                 provider: provider,
                 name: name,
-                monthlyBudgetUSD: budget,
+                monthlyFeeUSD: budget,
                 modelPattern: modelPattern,
                 usesLocalProxy: usesLocalProxy,
                 quotaWindows: configuredQuotaWindows,

@@ -29,6 +29,17 @@ Token Radar uses a mixed refresh model:
 
 OpenAI API usage/cost testing requires a key with access to the Organization usage/cost endpoints. ChatGPT/Codex consumer subscription quota is a separate product surface. For Codex, Token Radar auto-detects the local CLI/session state and creates an `OpenAI Codex` monitor item without asking the user to enter API settings. It reads the local `~/.codex/sessions/**/*.jsonl` snapshots written by the official Codex client: `payload.rate_limits` updates 5-hour and weekly remaining quota, while `payload.info.last_token_usage` imports historical token activity for the dashboard. A direct ChatGPT backend usage call remains experimental because it is not a documented public OpenAI API.
 
+## Money Semantics
+
+Token Radar keeps money fields separate by meaning:
+
+| Field | Meaning | Used for |
+| --- | --- | --- |
+| Official spend | Cost, credit, or balance reported by a provider or gateway API. | Billing reconciliation and the highest-confidence spend view. |
+| Estimated spend | Token count multiplied by the local model price catalog. | Local proxy, CLI logs, and provider APIs that report tokens but not cost. |
+| Monthly budget | User-defined API spend limit or alert line. | Budget rings, remaining budget, hard-cap decisions, and projected overrun alerts. |
+| Fixed monthly fee | Flat subscription price such as ChatGPT Plus/Pro, Claude Pro/Max, Codex, or Claude Code. | Fixed-cost totals and subscription panels; it is not treated as a variable usage budget. |
+
 ## Quota Windows
 
 Subscription and coding-plan limits are not a single monthly number. Token Radar models them as one monitor item with zero or more stacked quota windows:

@@ -1044,7 +1044,7 @@ struct SubscriptionDashboardBand: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(summary.target.name)
                             .font(.subheadline.weight(.medium))
-                        Text("\(summary.target.provider?.displayName ?? store.t("subscription.any_provider")) · \(MoneyFormatter.usd(summary.target.monthlyBudgetUSD)) / \(store.t("monitoring.per_month"))")
+                        Text("\(summary.target.provider?.displayName ?? store.t("subscription.any_provider")) · \(MoneyFormatter.usd(summary.target.fixedMonthlyFeeUSD)) / \(store.t("monitoring.per_month"))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

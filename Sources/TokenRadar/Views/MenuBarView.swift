@@ -459,7 +459,7 @@ struct MenuBarView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         } else {
-                            Text("\(MoneyFormatter.compactUSD(summary.target.monthlyBudgetUSD)) / \(store.t("monitoring.per_month"))")
+                            Text("\(MoneyFormatter.compactUSD(summary.target.fixedMonthlyFeeUSD)) / \(store.t("monitoring.per_month"))")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }

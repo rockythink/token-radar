@@ -89,6 +89,10 @@ public final class LocalProxyServer {
 
     private func handle(_ connection: NWConnection) {
         connection.start(queue: queue)
+        receiveRequest(on: connection, buffer: Data())
+    }
+
+    private func receiveRequest(on connection: NWConnection, buffer: Data) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 10 * 1024 * 1024) { [weak self] data, _, _, error in
             guard let self else { return }
             if let error {
@@ -100,8 +104,39 @@ public final class LocalProxyServer {
                 connection.cancel()
                 return
             }
-            self.process(data, connection: connection)
+
+            var nextBuffer = buffer
+            nextBuffer.append(data)
+            if self.isCompleteHTTPRequest(nextBuffer) {
+                self.process(nextBuffer, connection: connection)
+            } else {
+                self.receiveRequest(on: connection, buffer: nextBuffer)
+            }
         }
+    }
+
+    private func isCompleteHTTPRequest(_ data: Data) -> Bool {
+        guard let separatorRange = data.range(of: Data("\r\n\r\n".utf8)) else {
+            return false
+        }
+        let headerEnd = separatorRange.upperBound
+        let headerData = data[..<separatorRange.lowerBound]
+        guard let headerText = String(data: headerData, encoding: .utf8) else {
+            return false
+        }
+
+        let contentLength = headerText
+            .components(separatedBy: "\r\n")
+            .dropFirst()
+            .compactMap { line -> Int? in
+                let parts = line.split(separator: ":", maxSplits: 1).map(String.init)
+                guard parts.count == 2, parts[0].lowercased() == "content-length" else {
+                    return nil
+                }
+                return Int(parts[1].trimmingCharacters(in: .whitespaces))
+            }
+            .first ?? 0
+        return data.count >= headerEnd + contentLength
     }
 
     private func process(_ data: Data, connection: NWConnection) {
