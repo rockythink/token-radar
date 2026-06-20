@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "result": [
+    {
+      "id": "log_1",
+      "cached": false,
+      "created_at": "2026-06-08T08:30:00.000Z",
+      "duration": 1340,
+      "model": "gpt-4o-mini",
+      "path": "/v1/chat/completions",
+      "provider": "openai",
+      "success": true,
+      "tokens_in": 1200,
+      "tokens_out": 300,
+      "cost": 0.00036,
+      "status_code": 200
+    },
+    {
+      "id": "log_2",
+      "cached": false,
+      "created_at": "2026-06-08T09:10:00.000Z",
+      "duration": 2020,
+      "model": "claude-sonnet-4-20250514",
+      "path": "/v1/messages",
+      "provider": "anthropic",
+      "success": true,
+      "tokens_in": 2000,
+      "tokens_out": 500,
+      "cost": 0.0135,
+      "status_code": 200
+    }
+  ]
+}

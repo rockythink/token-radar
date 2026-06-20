@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest a product improvement or provider integration
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should Token Radar do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Provider integration
+        - Local proxy
+        - Local session import
+        - Quota windows
+        - Budget alerts
+        - Menu bar UI
+        - Dashboard UI
+        - Privacy or security
+        - Documentation
+        - Other
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link official provider docs when this is about a provider integration.

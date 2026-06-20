@@ -1,0 +1,14 @@
+{
+  "data": {
+    "label": "personal",
+    "limit": 50,
+    "limit_reset": "monthly",
+    "limit_remaining": 42.75,
+    "usage": 100,
+    "usage_daily": 1.5,
+    "usage_weekly": 3.25,
+    "usage_monthly": 7.25,
+    "is_free_tier": false
+  }
+}
+

@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "starting_at": "2026-06-01T00:00:00Z",
+      "ending_at": "2026-06-02T00:00:00Z",
+      "results": [
+        {
+          "uncached_input_tokens": 2000,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1000,
+            "ephemeral_5m_input_tokens": 100
+          },
+          "cache_read_input_tokens": 100,
+          "output_tokens": 800,
+          "api_key_id": "apikey_1",
+          "workspace_id": "workspace_1",
+          "model": "claude-sonnet-4.6"
+        }
+      ]
+    }
+  ],
+  "has_more": false,
+  "next_page": null
+}
+

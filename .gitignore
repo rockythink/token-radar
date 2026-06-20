@@ -1,0 +1,31 @@
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Local app bundles and release artifacts
+dist/
+*.dmg
+*.zip
+
+# Xcode and macOS local state
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Codex/Cowork local environment metadata
+.codex/
+
+# Local runtime data
+*.log
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+token-radar-settings.json
+token-radar.sqlite3
+
+# Local secrets
+.env
+.env.*
+!.env.example

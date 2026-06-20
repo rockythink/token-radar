@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a reproducible Token Radar bug
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest sequence that reproduces the issue.
+      placeholder: |
+        1. Open Token Radar
+        2. Configure ...
+        3. Click ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Token Radar version or commit
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "14.6"
+  - type: dropdown
+    id: source
+    attributes:
+      label: Monitoring source
+      options:
+        - Local proxy
+        - Codex local logs
+        - Claude Code local logs
+        - OpenAI API
+        - Anthropic API
+        - OpenRouter
+        - Vercel AI Gateway
+        - Cloudflare AI Gateway
+        - DeepSeek
+        - Manual subscription
+        - Other
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Do not paste real API keys, tokens, or private session logs.
